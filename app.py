@@ -7,11 +7,20 @@ import pandas as pd
 import numpy as np
 import os
 
-# Set Dagshub credentials BEFORE importing dagshub (required for token auth)
+# Set MLflow credentials BEFORE importing mlflow
+DAGSHUB_USERNAME = "Amanuel-1"
+DAGSHUB_REPO = "churn-pipeline"
+
+# Get token from secrets or environment
+token = None
 if hasattr(st, 'secrets') and 'DAGSHUB_USER_TOKEN' in st.secrets:
-    os.environ['DAGSHUB_USER_TOKEN'] = st.secrets['DAGSHUB_USER_TOKEN']
-    os.environ['MLFLOW_TRACKING_USERNAME'] = st.secrets.get('DAGSHUB_USERNAME', 'Amanuel-1')
-    os.environ['MLFLOW_TRACKING_PASSWORD'] = st.secrets['DAGSHUB_USER_TOKEN']
+    token = st.secrets['DAGSHUB_USER_TOKEN']
+elif 'DAGSHUB_USER_TOKEN' in os.environ:
+    token = os.environ['DAGSHUB_USER_TOKEN']
+
+if token:
+    os.environ['MLFLOW_TRACKING_USERNAME'] = DAGSHUB_USERNAME
+    os.environ['MLFLOW_TRACKING_PASSWORD'] = token
 
 import mlflow
 import mlflow.sklearn
@@ -19,8 +28,8 @@ import joblib
 import json
 from glob import glob
 
-# Set MLflow tracking URI directly (skip dagshub.init to avoid OAuth prompt)
-MLFLOW_TRACKING_URI = "https://dagshub.com/Amanuel-1/churn-pipeline.mlflow"
+# Set MLflow tracking URI
+MLFLOW_TRACKING_URI = f"https://dagshub.com/{DAGSHUB_USERNAME}/{DAGSHUB_REPO}.mlflow"
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
 MODEL_REGISTRY_NAME = "churn_predictor"
@@ -28,29 +37,81 @@ MODEL_REGISTRY_NAME = "churn_predictor"
 
 def load_model_from_mlflow():
     """load model from mlflow registry"""
+    
+    # Known good run ID from Dagshub
+    KNOWN_RUN_ID = "c9450f585d904694b7ac57bcf0e080b7"
+    
+    # Debug: show auth status
+    st.sidebar.write("**Debug Info:**")
+    st.sidebar.write(f"Auth configured: {'Yes' if token else 'No'}")
+    
+    client = mlflow.tracking.MlflowClient()
+    
+    # Method 1: Try model registry
     try:
-        model_uri = f"models:/{MODEL_REGISTRY_NAME}/latest"
+        model_uri = f"models:/{MODEL_REGISTRY_NAME}/1"
         model = mlflow.sklearn.load_model(model_uri)
         
-        # get model info
-        client = mlflow.tracking.MlflowClient()
-        latest_version = client.get_latest_versions(MODEL_REGISTRY_NAME, stages=["None"])[0]
-        run_id = latest_version.run_id
-        
-        # get metrics from the run
-        run = client.get_run(run_id)
-        metadata = {
-            "model_params": run.data.params,
-            "metrics": {k: float(v) for k, v in run.data.metrics.items()},
-            "run_id": run_id,
-            "version": latest_version.version,
-            "source": "mlflow_registry"
-        }
+        try:
+            model_version = client.get_model_version(MODEL_REGISTRY_NAME, "1")
+            run = client.get_run(model_version.run_id)
+            metadata = {
+                "model_params": run.data.params,
+                "metrics": {k: float(v) for k, v in run.data.metrics.items()},
+                "run_id": model_version.run_id,
+                "version": "1",
+                "source": "mlflow_registry"
+            }
+        except:
+            metadata = {"source": "mlflow_registry", "version": "1"}
         
         return model, metadata
     except Exception as e:
-        st.warning(f"Could not load from MLflow: {e}")
-        return None, None
+        st.sidebar.write(f"Registry: {str(e)[:50]}...")
+    
+    # Method 2: Load directly from known run ID
+    try:
+        model_uri = f"runs:/{KNOWN_RUN_ID}/model"
+        model = mlflow.sklearn.load_model(model_uri)
+        
+        try:
+            run = client.get_run(KNOWN_RUN_ID)
+            metadata = {
+                "model_params": run.data.params,
+                "metrics": {k: float(v) for k, v in run.data.metrics.items()},
+                "run_id": KNOWN_RUN_ID,
+                "source": "mlflow_run"
+            }
+        except:
+            metadata = {"source": "mlflow_run", "run_id": KNOWN_RUN_ID}
+        
+        st.sidebar.write("✓ Loaded from run")
+        return model, metadata
+    except Exception as e:
+        st.sidebar.write(f"Run load: {str(e)[:50]}...")
+    
+    # Method 3: Search experiments
+    try:
+        experiments = client.search_experiments()
+        for exp in experiments:
+            runs = client.search_runs(exp.experiment_id, order_by=["start_time DESC"], max_results=3)
+            for run in runs:
+                try:
+                    model_uri = f"runs:/{run.info.run_id}/model"
+                    model = mlflow.sklearn.load_model(model_uri)
+                    metadata = {
+                        "model_params": run.data.params,
+                        "metrics": {k: float(v) for k, v in run.data.metrics.items()},
+                        "run_id": run.info.run_id,
+                        "source": "mlflow_run"
+                    }
+                    return model, metadata
+                except:
+                    continue
+    except Exception as e:
+        st.sidebar.write(f"Search: {str(e)[:50]}...")
+    
+    return None, None
 
 
 def load_model_from_local():
