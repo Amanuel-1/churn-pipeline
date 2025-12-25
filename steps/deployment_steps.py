@@ -2,6 +2,7 @@
 Deployment steps for production pipeline
 handles validation, model registration, and artifact saving
 """
+import dagshub
 import mlflow
 import mlflow.sklearn
 import logging
@@ -17,8 +18,9 @@ import pandas as pd
 from src.evaluation_util import Accuracy, Precision, Recall, F1Score
 from sklearn.metrics import roc_auc_score
 
+# Initialize Dagshub MLflow
+dagshub.init(repo_owner='Amanuel-1', repo_name='churn-pipeline', mlflow=True)
 
-MLFLOW_TRACKING_URI = "mlruns"
 EXPERIMENT_NAME = "churn_production"
 MODEL_REGISTRY_NAME = "churn_predictor"
 
@@ -149,8 +151,6 @@ def deploy_model(
     if not passed_quality_gate:
         logging.warning("Model did NOT pass quality gate - skipping deployment")
         return "not_deployed"
-    
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     
     exp = mlflow.get_experiment_by_name(EXPERIMENT_NAME)
     if exp is None:

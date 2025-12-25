@@ -1,19 +1,28 @@
 """
 Streamlit app for churn prediction
-uses the deployed model from MLflow registry
+uses the deployed model from MLflow registry (Dagshub)
 """
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
+
+# Set Dagshub credentials from secrets (for cloud deployment) or env
+if hasattr(st, 'secrets') and 'DAGSHUB_USER_TOKEN' in st.secrets:
+    os.environ['DAGSHUB_USER_TOKEN'] = st.secrets['DAGSHUB_USER_TOKEN']
+    os.environ['DAGSHUB_USERNAME'] = st.secrets.get('DAGSHUB_USERNAME', 'Amanuel-1')
+
+import dagshub
 import mlflow
 import mlflow.sklearn
 import joblib
-import os
 import json
 from glob import glob
 
+# Initialize Dagshub MLflow
+dagshub.init(repo_owner='Amanuel-1', repo_name='churn-pipeline', mlflow=True)
 
-MLFLOW_TRACKING_URI = "mlruns"
+MLFLOW_TRACKING_URI = "https://dagshub.com/Amanuel-1/churn-pipeline.mlflow"
 MODEL_REGISTRY_NAME = "churn_predictor"
 
 

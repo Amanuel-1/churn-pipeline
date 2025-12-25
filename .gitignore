@@ -43,6 +43,9 @@ great_expectations/uncommitted/
 .env.*
 !.env.example
 
+# Streamlit secrets (contains auth tokens)
+.streamlit/secrets.toml
+
 # OS
 .DS_Store
 Thumbs.db

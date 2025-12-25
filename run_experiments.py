@@ -1,7 +1,10 @@
 """
 Run multiple training experiments with different models and hyperparameters
-logs everything to mlflow for comparison
+logs everything to mlflow (via Dagshub) for comparison
 """
+import dagshub
+dagshub.init(repo_owner='Amanuel-1', repo_name='churn-pipeline', mlflow=True)
+
 from pipelines.trainning_pipeline import training_pipeline
 
 # data path
@@ -134,7 +137,7 @@ def run_all_experiments():
     
     passed = sum(1 for r in results if r["status"] == "ok")
     print(f"Completed: {passed}/{len(EXPERIMENTS)}")
-    print("\nView results: mlflow ui --backend-store-uri mlruns")
+    print("\nView results: https://dagshub.com/Amanuel-1/churn-pipeline.mlflow")
 
 
 if __name__ == "__main__":

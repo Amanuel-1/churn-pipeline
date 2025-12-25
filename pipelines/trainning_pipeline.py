@@ -2,12 +2,16 @@
 Training Pipeline - for model development and experimentation
 use this for training new models and comparing different approaches
 """
+import dagshub
 import mlflow
 import mlflow.sklearn
 import logging
 import json
 import os
 from datetime import datetime
+
+# Initialize Dagshub MLflow integration
+dagshub.init(repo_owner='Amanuel-1', repo_name='churn-pipeline', mlflow=True)
 from zenml import pipeline, step, get_step_context
 from typing import Annotated, Dict, Tuple, Any
 from sklearn.base import BaseEstimator
@@ -19,7 +23,6 @@ from steps.train_model import train_model
 from steps.evaluate_model import evaluate_model
 
 
-MLFLOW_TRACKING_URI = "mlruns"
 EXPERIMENT_NAME = "churn_training"
 
 
@@ -56,9 +59,7 @@ def log_training_run(
     model_params: Annotated[Dict[str, Any], "params"],
     run_name: str = "training_run"
 ) -> Annotated[str, "run_id"]:
-    """log training run to mlflow"""
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    
+    """log training run to mlflow (via Dagshub)"""
     exp = mlflow.get_experiment_by_name(EXPERIMENT_NAME)
     if exp is None:
         mlflow.create_experiment(EXPERIMENT_NAME)
