@@ -14,7 +14,7 @@ from steps.deployment_steps import (
 )
 
 
-@pipeline(name="deployment_pipeline")
+@pipeline(name="deployment_pipeline", enable_cache=False)
 def deployment_pipeline(
     file_path: str,
     model_name: str = "GradientBoosting",

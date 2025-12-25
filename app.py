@@ -32,7 +32,7 @@ from glob import glob
 MLFLOW_TRACKING_URI = f"https://dagshub.com/{DAGSHUB_USERNAME}/{DAGSHUB_REPO}.mlflow"
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-MODEL_REGISTRY_NAME = "churn_predictor"
+MODEL_REGISTRY_NAME = "churn_predictor_model"
 
 
 def load_model_from_mlflow():
