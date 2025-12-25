@@ -7,29 +7,28 @@ import pandas as pd
 import numpy as np
 import os
 
-# Set Dagshub credentials from secrets (for cloud deployment) or env
+# Set Dagshub credentials BEFORE importing dagshub (required for token auth)
 if hasattr(st, 'secrets') and 'DAGSHUB_USER_TOKEN' in st.secrets:
     os.environ['DAGSHUB_USER_TOKEN'] = st.secrets['DAGSHUB_USER_TOKEN']
-    os.environ['DAGSHUB_USERNAME'] = st.secrets.get('DAGSHUB_USERNAME', 'Amanuel-1')
+    os.environ['MLFLOW_TRACKING_USERNAME'] = st.secrets.get('DAGSHUB_USERNAME', 'Amanuel-1')
+    os.environ['MLFLOW_TRACKING_PASSWORD'] = st.secrets['DAGSHUB_USER_TOKEN']
 
-import dagshub
 import mlflow
 import mlflow.sklearn
 import joblib
 import json
 from glob import glob
 
-# Initialize Dagshub MLflow
-dagshub.init(repo_owner='Amanuel-1', repo_name='churn-pipeline', mlflow=True)
-
+# Set MLflow tracking URI directly (skip dagshub.init to avoid OAuth prompt)
 MLFLOW_TRACKING_URI = "https://dagshub.com/Amanuel-1/churn-pipeline.mlflow"
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+
 MODEL_REGISTRY_NAME = "churn_predictor"
 
 
 def load_model_from_mlflow():
     """load model from mlflow registry"""
     try:
-        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
         model_uri = f"models:/{MODEL_REGISTRY_NAME}/latest"
         model = mlflow.sklearn.load_model(model_uri)
         
