@@ -35,15 +35,12 @@ mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 MODEL_REGISTRY_NAME = "churn_predictor_model"
 
 
+@st.cache_resource
 def load_model_from_mlflow():
-    """load model from mlflow registry"""
+    """load model from mlflow registry (cached to avoid re-downloading)"""
     
     # Known good run ID from Dagshub
     KNOWN_RUN_ID = "c9450f585d904694b7ac57bcf0e080b7"
-    
-    # Debug: show auth status
-    st.sidebar.write("**Debug Info:**")
-    st.sidebar.write(f"Auth configured: {'Yes' if token else 'No'}")
     
     client = mlflow.tracking.MlflowClient()
     
@@ -67,7 +64,7 @@ def load_model_from_mlflow():
         
         return model, metadata
     except Exception as e:
-        st.sidebar.write(f"Registry: {str(e)[:50]}...")
+        pass  # Try next method
     
     # Method 2: Load directly from known run ID
     try:
@@ -85,10 +82,9 @@ def load_model_from_mlflow():
         except:
             metadata = {"source": "mlflow_run", "run_id": KNOWN_RUN_ID}
         
-        st.sidebar.write("✓ Loaded from run")
         return model, metadata
     except Exception as e:
-        st.sidebar.write(f"Run load: {str(e)[:50]}...")
+        pass  # Try next method
     
     # Method 3: Search experiments
     try:
@@ -109,13 +105,14 @@ def load_model_from_mlflow():
                 except:
                     continue
     except Exception as e:
-        st.sidebar.write(f"Search: {str(e)[:50]}...")
+        pass  # All methods failed
     
     return None, None
 
 
+@st.cache_resource
 def load_model_from_local():
-    """fallback - load from local files"""
+    """fallback - load from local files (cached)"""
     model_dirs = glob("models/deployed_*")
     if not model_dirs:
         model_dirs = glob("models/production_*")
@@ -139,8 +136,9 @@ def load_model_from_local():
     return None, None
 
 
+@st.cache_resource
 def load_model():
-    """try mlflow first, fallback to local"""
+    """try mlflow first, fallback to local (cached)"""
     model, metadata = load_model_from_mlflow()
     if model is not None:
         return model, metadata
