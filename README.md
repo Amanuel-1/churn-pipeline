@@ -2,7 +2,7 @@
 
 A production-grade machine learning operations (MLOps) pipeline for predicting customer churn, featuring automated training, experiment tracking, model registry, and real-time inference through a web application.
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://churn-pipeline.streamlit.app)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://churn-pipeline-grcgpc5y4pu5glea3r2fwr.streamlit.app/)
 [![MLflow](https://img.shields.io/badge/MLflow-Tracking-blue)](https://dagshub.com/Amanuel-1/churn-pipeline.mlflow)
 
 ## Table of Contents
@@ -274,7 +274,7 @@ Configure the following secrets in Streamlit Cloud:
 
 ### Live Application
 
-Access the deployed application: [https://churn-pipeline.streamlit.app](https://churn-pipeline.streamlit.app)
+Access the deployed application: [https://churn-pipeline-grcgpc5y4pu5glea3r2fwr.streamlit.app/](https://churn-pipeline-grcgpc5y4pu5glea3r2fwr.streamlit.app/)
 
 ## API Reference
 
