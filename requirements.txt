@@ -36,6 +36,9 @@ optuna>=3.4.0
 fastapi>=0.104.0
 uvicorn>=0.24.0
 
+# Streamlit for UI
+streamlit>=1.29.0
+
 # Cloud Storage (optional)
 boto3>=1.33.0
 

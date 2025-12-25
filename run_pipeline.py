@@ -28,10 +28,11 @@ def run_training(model_name: str = "RandomForest", hyperparams: dict = None):
     return metrics
 
 
-def run_deployment(model_name: str = "GradientBoosting", hyperparams: dict = None):
+def run_deployment(model_name: str = "GradientBoosting", hyperparams: dict = None, min_accuracy: float = 0.85):
     """run deployment pipeline for production"""
     print("=" * 50)
     print("Running DEPLOYMENT pipeline")
+    print(f"Min accuracy threshold: {min_accuracy}")
     print("=" * 50)
     
     # production-ready hyperparams
@@ -42,16 +43,15 @@ def run_deployment(model_name: str = "GradientBoosting", hyperparams: dict = Non
             "gb_max_depth": 4
         }
     
-    passed = deployment_pipeline(
+    status = deployment_pipeline(
         file_path=DATA_PATH,
         model_name=model_name,
         hyperparams=hyperparams,
-        min_accuracy=0.85,
-        min_f1=0.80
+        min_accuracy=min_accuracy
     )
     
-    print(f"\nDeployment complete! Quality gate: {'PASSED' if passed else 'FAILED'}")
-    return passed
+    print(f"\nDeployment status: {status}")
+    return status
 
 
 def run_inference(data_path: str = None, model_path: str = None):
@@ -87,12 +87,18 @@ if __name__ == "__main__":
         default="GradientBoosting",
         help="Model to use (RandomForest, LogisticRegression, GradientBoosting)"
     )
+    parser.add_argument(
+        "--min-accuracy",
+        type=float,
+        default=0.85,
+        help="Minimum accuracy threshold for deployment (default: 0.85)"
+    )
     
     args = parser.parse_args()
     
     if args.mode == "train":
         run_training(model_name=args.model)
     elif args.mode == "deploy":
-        run_deployment(model_name=args.model)
+        run_deployment(model_name=args.model, min_accuracy=args.min_accuracy)
     elif args.mode == "inference":
         run_inference()
