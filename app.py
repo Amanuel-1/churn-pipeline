@@ -1,18 +1,52 @@
 """
 Streamlit app for churn prediction
-uses the deployed model to make predictions
+uses the deployed model from MLflow registry
 """
 import streamlit as st
 import pandas as pd
 import numpy as np
+import mlflow
+import mlflow.sklearn
 import joblib
 import os
 import json
 from glob import glob
 
 
-def load_latest_model():
-    """load the most recent deployed model"""
+MLFLOW_TRACKING_URI = "mlruns"
+MODEL_REGISTRY_NAME = "churn_predictor"
+
+
+def load_model_from_mlflow():
+    """load model from mlflow registry"""
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        model_uri = f"models:/{MODEL_REGISTRY_NAME}/latest"
+        model = mlflow.sklearn.load_model(model_uri)
+        
+        # get model info
+        client = mlflow.tracking.MlflowClient()
+        latest_version = client.get_latest_versions(MODEL_REGISTRY_NAME, stages=["None"])[0]
+        run_id = latest_version.run_id
+        
+        # get metrics from the run
+        run = client.get_run(run_id)
+        metadata = {
+            "model_params": run.data.params,
+            "metrics": {k: float(v) for k, v in run.data.metrics.items()},
+            "run_id": run_id,
+            "version": latest_version.version,
+            "source": "mlflow_registry"
+        }
+        
+        return model, metadata
+    except Exception as e:
+        st.warning(f"Could not load from MLflow: {e}")
+        return None, None
+
+
+def load_model_from_local():
+    """fallback - load from local files"""
     model_dirs = glob("models/deployed_*")
     if not model_dirs:
         model_dirs = glob("models/production_*")
@@ -30,9 +64,20 @@ def load_latest_model():
         if os.path.exists(metadata_path):
             with open(metadata_path) as f:
                 metadata = json.load(f)
+            metadata["source"] = "local_file"
         return model, metadata
     
     return None, None
+
+
+def load_model():
+    """try mlflow first, fallback to local"""
+    model, metadata = load_model_from_mlflow()
+    if model is not None:
+        return model, metadata
+    
+    # fallback
+    return load_model_from_local()
 
 
 def preprocess_input(data: dict) -> pd.DataFrame:
@@ -82,8 +127,8 @@ def main():
     st.title("🔮 Customer Churn Prediction")
     st.markdown("Predict whether a customer will churn based on their profile")
     
-    # load model
-    model, metadata = load_latest_model()
+    # load model from mlflow
+    model, metadata = load_model()
     
     if model is None:
         st.error("No deployed model found! Run the deployment pipeline first.")
@@ -94,11 +139,19 @@ def main():
     with st.sidebar:
         st.header("Model Info")
         if metadata:
-            st.write(f"**Type:** {metadata.get('model_params', {}).get('model_type', 'Unknown')}")
+            source = metadata.get('source', 'unknown')
+            st.write(f"**Source:** {source}")
+            
+            if source == "mlflow_registry":
+                st.write(f"**Version:** {metadata.get('version', 'N/A')}")
+                st.write(f"**Run ID:** {metadata.get('run_id', 'N/A')[:8]}...")
+            
+            model_type = metadata.get('model_params', {}).get('model_type', 'Unknown')
+            st.write(f"**Type:** {model_type}")
+            
             metrics = metadata.get('metrics', {})
             st.write(f"**Accuracy:** {metrics.get('accuracy', 0):.2%}")
             st.write(f"**F1 Score:** {metrics.get('f1_score', 0):.2%}")
-            st.write(f"**Deployed:** {metadata.get('timestamp', 'Unknown')}")
         else:
             st.write("Metadata not available")
     
